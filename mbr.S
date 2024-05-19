@@ -39,7 +39,7 @@ SECTION MBR vstart=0x7c00
     mov cx, 4                      ;待读入的扇区数目
 
     call rd_disk_m_16              ;执行该函数在"16位模式下读硬盘"
-    jmp LOADER_BASE_ADDR           ;跳转到LOADER程序
+    jmp LOADER_BASE_ADDR + 0x300   ;跳转到LOADER程序
 
 ; ============================================================
 ; 功能:读取硬盘n(由cx寄存器决定读几个扇区)个扇区
