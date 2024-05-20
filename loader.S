@@ -274,4 +274,125 @@ p_mode_start:
     mov byte [gs:0x164], 'T'
     mov byte [gs:0x165], 0xA4
 
+;============================================================
+;启动分页模式
+;============================================================
+    ;第一步:创建页目录表并初始化页内存位图 
+    call setup_page
+
+    ;修改视频（显示）内存段的段描述符中的段基址，以反映当前的虚拟地址。
+    ;sgdt指令将全局描述符表寄存器(GDTR)的内容存储到指定地址的内存中
+    sgdt [gdt_ptr]
+    ;gdt_ptr + 2 是 GDT 的地址
+    mov ebx, [gdt_ptr+2]
+    ;ebx+0x18+4 是第三个段描述符（视频内存段描述符）的高4字节地址
+    ;与0xc0000000进行OR操作是为了修改这个段描述符的最高字节，并将视频内存段映射到4GB的上1GB（即内核空间）
+    or dword [ebx+0x18+4], 0xc0000000
+
+    ;修改GDT本身的基址
+    add dword [gdt_ptr+2], 0xc0000000
+    add esp, 0xc0000000
+
+    ;第二步:将PDT的地址放入CR3寄存器
+    mov eax, PAGE_DIR_TABLE_POS
+    mov cr3, eax
+
+    ;第三步:将CR0寄存器中的pg位（第31位）置为1
+    mov eax, cr0
+    or eax, 0x80000000
+    mov cr0, eax
+
+    ;在开启分页后，用GDT新的地址值重新加载
+    lgdt [gdt_ptr]
+    mov byte [gs:162], 'V'
+    mov byte [gs:0x280], '5'
+    mov byte [gs:0x281], 0xA4
+    mov byte [gs:0x282], ' '
+    mov byte [gs:0x283], 0xA4
+    mov byte [gs:0x284], 'O'
+    mov byte [gs:0x285], 0xA4
+    mov byte [gs:0x286], 'P'
+    mov byte [gs:0x287], 0xA4
+    mov byte [gs:0x288], 'E'
+    mov byte [gs:0x289], 0xA4
+    mov byte [gs:0x28a], 'N'
+    mov byte [gs:0x28b], 0xA4
+    mov byte [gs:0x28c], ' '
+    mov byte [gs:0x28d], 0xA4
+    mov byte [gs:0x28e], 'P'
+    mov byte [gs:0x28f], 0xA4
+    mov byte [gs:0x290], 'A'
+    mov byte [gs:0x291], 0xA4
+    mov byte [gs:0x292], 'G'
+    mov byte [gs:0x293], 0xA4
+    mov byte [gs:0x294], 'E'
+    mov byte [gs:0x295], 0xA4
+
     jmp $
+
+
+; ============================================================
+; 创建页目录及页表
+; ============================================================
+
+;逐字清除占用页面目录的4KB字节
+setup_page:
+    mov ecx, 4096
+    mov esi, 0
+
+.clear_PDT:
+    mov byte [PAGE_DIR_TABLE_POS+esi], 0 ;全部初始化为0
+    inc esi
+    loop .clear_PDT
+
+;------------------------
+;创建页目录项(PDE 1、768、1024)
+;------------------------
+.create_PDE:
+    mov eax, PAGE_DIR_TABLE_POS
+    ;页目录表(PDT)从0x100000开始，其本身占用0x1000字节。因此，第一个页表位于地址0x101000
+    add eax, 0x1000
+    mov ebx, eax
+
+    or eax, PG_US_U | PG_RW_W | PG_P
+    ;创建第1个页目录项(PDE)
+    mov [PAGE_DIR_TABLE_POS + 0x0], eax
+    ;创建第768个页目录项(PDE) -> 目的是将虚拟地址3GB (0xc0000000)～3GB+4MB (0xc03fffff)映射到第一个页表，然后将其映射到物理地址0～4MB，即第一个标准页面。
+    mov [PAGE_DIR_TABLE_POS + 0xc00], eax
+
+    ;让最后一个页目录项存储PDT的起始地址,为了能动态操作页表
+    sub eax, 0x1000
+    mov [PAGE_DIR_TABLE_POS+4092], eax
+
+;------------------------
+;创建页表项(PTE)
+;------------------------
+    ;一个完整的页表对应于4MB的物理内存，但内核只需要1MB（256 * 4KB）的空间。因此，首先只创建了256个页表项。
+    mov ecx, 256
+    mov esi, 0
+    mov edx, PG_US_U | PG_RW_W | PG_P
+
+.create_PTE:
+    mov [ebx+esi*4], edx
+    ;一个页表项对应4KB的物理内存，所以要加4096。
+    add edx, 4096
+    inc esi
+    loop .create_PTE
+
+;------------------------
+; 为操作系统内核创建页目录项(PDE 769~1022)
+;------------------------
+    ;将操作系统内核所在的上1GB虚拟内存（3GB～4GB）映射到物理内存0～1GB。
+    mov eax, PAGE_DIR_TABLE_POS
+    add eax, 0x2000                   ;EAX代表页表的地址,指向第二个页表位置
+    or eax, PG_US_U | PG_RW_W | PG_P
+    mov ebx, PAGE_DIR_TABLE_POS
+    mov ecx, 254    ;一共创建254 PDEs
+    mov esi, 769    ;从第769项开始
+
+.create_kernel_PDE:
+    mov [ebx+esi*4], eax
+    inc esi
+    add eax, 0x1000
+    loop .create_kernel_PDE
+    ret
