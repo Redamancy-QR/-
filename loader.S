@@ -63,16 +63,6 @@ loader_start:
     mov byte [gs:0xa3], 0xA4
     mov byte [gs:0xa4], 'L'
     mov byte [gs:0xa5], 0xA4
-    mov byte [gs:0xa6], 'O'
-    mov byte [gs:0xa7], 0xA4
-    mov byte [gs:0xa8], 'A'
-    mov byte [gs:0xa9], 0xA4
-    mov byte [gs:0xaa], 'D'
-    mov byte [gs:0xab], 0xA4
-    mov byte [gs:0xac], 'E'
-    mov byte [gs:0xad], 0xA4
-    mov byte [gs:0xae], 'R'
-    mov byte [gs:0xaf], 0xA4
 
 ; ============================================================
 ; 获取物理内存容量
@@ -183,26 +173,6 @@ loader_start:
     mov byte [gs:0x1e7], 0xA4
     mov byte [gs:0x1e8], 'M'
     mov byte [gs:0x1e9], 0xA4
-    mov byte [gs:0x1ea], 'E'
-    mov byte [gs:0x1eb], 0xA4
-    mov byte [gs:0x1ec], 'R'
-    mov byte [gs:0x1ed], 0xA4
-    mov byte [gs:0x1ee], 'Y'
-    mov byte [gs:0x1ef], 0xA4
-    mov byte [gs:0x1f0], ' '
-    mov byte [gs:0x1f1], 0xA4
-    mov byte [gs:0x1f2], 'G'
-    mov byte [gs:0x1f3], 0xA4
-    mov byte [gs:0x1f4], 'E'
-    mov byte [gs:0x1f5], 0xA4
-    mov byte [gs:0x1f6], 'T'
-    mov byte [gs:0x1f7], 0xA4
-    mov byte [gs:0x1f8], ' '
-    mov byte [gs:0x1f9], 0xA4
-    mov byte [gs:0x1fa], 'O'
-    mov byte [gs:0x1fb], 0xA4
-    mov byte [gs:0x1fc], 'K'
-    mov byte [gs:0x1fd], 0xA4
 
 ; ============================================================
 ; 准备进入保护模式
@@ -239,40 +209,19 @@ p_mode_start:
     mov byte [gs:0x141], 0xA4
     mov byte [gs:0x142], ' '
     mov byte [gs:0x143], 0xA4
-    mov byte [gs:0x144], 'L'
+    mov byte [gs:0x144], 'P'
     mov byte [gs:0x145], 0xA4
-    mov byte [gs:0x146], 'O'
+    mov byte [gs:0x146], 'T'
     mov byte [gs:0x147], 0xA4
-    mov byte [gs:0x148], 'A'
-    mov byte [gs:0x149], 0xA4
-    mov byte [gs:0x14a], 'D'
-    mov byte [gs:0x14b], 0xA4
-    mov byte [gs:0x14c], 'E'
-    mov byte [gs:0x14d], 0xA4
-    mov byte [gs:0x14e], 'R'
-    mov byte [gs:0x14f], 0xA4
-    mov byte [gs:0x150], ' '
-    mov byte [gs:0x151], 0xA4
-    mov byte [gs:0x152], 'I'
-    mov byte [gs:0x153], 0xA4
-    mov byte [gs:0x154], 'N'
-    mov byte [gs:0x155], 0xA4
-    mov byte [gs:0x156], ' '
-    mov byte [gs:0x157], 0xA4
-    mov byte [gs:0x158], 'P'
-    mov byte [gs:0x159], 0xA4
-    mov byte [gs:0x15a], 'R'
-    mov byte [gs:0x15b], 0xA4
-    mov byte [gs:0x15c], 'O'
-    mov byte [gs:0x15d], 0xA4
-    mov byte [gs:0x15e], 'T'
-    mov byte [gs:0x15f], 0xA4
-    mov byte [gs:0x160], 'E'
-    mov byte [gs:0x161], 0xA4
-    mov byte [gs:0x162], 'C'
-    mov byte [gs:0x163], 0xA4
-    mov byte [gs:0x164], 'T'
-    mov byte [gs:0x165], 0xA4
+
+
+;------------------------
+;加载内核到内存缓冲区
+;------------------------
+    mov eax, KERNEL_START_SECTOR   ;kernel.bin所在的扇区号
+    mov ebx, KERNEL_BIN_BASE_ADDR  ;从磁盘读出后,写入到ebx指定的地址
+    mov ecx, 200                   ;读入的扇区数
+    call rd_disk_m_32
 
 ;============================================================
 ;启动分页模式
@@ -304,31 +253,41 @@ p_mode_start:
 
     ;在开启分页后，用GDT新的地址值重新加载
     lgdt [gdt_ptr]
-    mov byte [gs:162], 'V'
     mov byte [gs:0x280], '5'
     mov byte [gs:0x281], 0xA4
     mov byte [gs:0x282], ' '
     mov byte [gs:0x283], 0xA4
-    mov byte [gs:0x284], 'O'
+    mov byte [gs:0x284], 'P'
     mov byte [gs:0x285], 0xA4
-    mov byte [gs:0x286], 'P'
+    mov byte [gs:0x286], 'A'
     mov byte [gs:0x287], 0xA4
-    mov byte [gs:0x288], 'E'
+    mov byte [gs:0x288], 'G'
     mov byte [gs:0x289], 0xA4
-    mov byte [gs:0x28a], 'N'
+    mov byte [gs:0x28a], 'E'
     mov byte [gs:0x28b], 0xA4
-    mov byte [gs:0x28c], ' '
-    mov byte [gs:0x28d], 0xA4
-    mov byte [gs:0x28e], 'P'
-    mov byte [gs:0x28f], 0xA4
-    mov byte [gs:0x290], 'A'
-    mov byte [gs:0x291], 0xA4
-    mov byte [gs:0x292], 'G'
-    mov byte [gs:0x293], 0xA4
-    mov byte [gs:0x294], 'E'
-    mov byte [gs:0x295], 0xA4
 
-    jmp $
+;============================================================
+;进入内核
+;============================================================
+    ;强制刷新流水线,更新gdt
+    jmp SELECTOR_CODE:enter_kernel
+
+enter_kernel:
+    call kernel_init
+    mov esp, 0xc009f000     ;进入内核后，设置新的栈顶
+    mov byte [gs:0x320], '6'
+    mov byte [gs:0x321], 0xA4
+    mov byte [gs:0x322], ' '
+    mov byte [gs:0x323], 0xA4
+    mov byte [gs:0x324], 'L'
+    mov byte [gs:0x325], 0xA4
+    mov byte [gs:0x326], 'O'
+    mov byte [gs:0x327], 0xA4
+    mov byte [gs:0x328], 'A'
+    mov byte [gs:0x329], 0xA4
+    mov byte [gs:0x32a], 'D'
+    mov byte [gs:0x32b], 0xA4
+    jmp KERNEL_ENTRY_POINT  ;跳转到内核
 
 
 ; ============================================================
@@ -345,9 +304,9 @@ setup_page:
     inc esi
     loop .clear_PDT
 
-;------------------------
-;创建页目录项(PDE 1、768、1024)
-;------------------------
+; ------------------------
+; 创建页目录项(PDE 1、768、1024)
+; ------------------------
 .create_PDE:
     mov eax, PAGE_DIR_TABLE_POS
     ;页目录表(PDT)从0x100000开始，其本身占用0x1000字节。因此，第一个页表位于地址0x101000
@@ -364,9 +323,9 @@ setup_page:
     sub eax, 0x1000
     mov [PAGE_DIR_TABLE_POS+4092], eax
 
-;------------------------
-;创建页表项(PTE)
-;------------------------
+; ------------------------
+; 创建页表项(PTE)
+; ------------------------
     ;一个完整的页表对应于4MB的物理内存，但内核只需要1MB（256 * 4KB）的空间。因此，首先只创建了256个页表项。
     mov ecx, 256
     mov esi, 0
@@ -379,9 +338,9 @@ setup_page:
     inc esi
     loop .create_PTE
 
-;------------------------
+; ------------------------
 ; 为操作系统内核创建页目录项(PDE 769~1022)
-;------------------------
+; ------------------------
     ;将操作系统内核所在的上1GB虚拟内存（3GB～4GB）映射到物理内存0～1GB。
     mov eax, PAGE_DIR_TABLE_POS
     add eax, 0x2000                   ;EAX代表页表的地址,指向第二个页表位置
@@ -395,4 +354,141 @@ setup_page:
     inc esi
     add eax, 0x1000
     loop .create_kernel_PDE
+    ret
+
+
+; ============================================================
+; 功能:读取硬盘n(由ecx寄存器决定读几个扇区)个扇区
+; ============================================================
+rd_disk_m_32:
+;第一步:设置要读取的扇区数
+    mov esi, eax
+    mov dx, 0x1f2
+    mov al, cl
+    out dx, al
+    mov eax, esi
+
+;第二步,将LBA地址存入0x1f3 ~ 0x1f6
+    ;LBA地址7~0位写入端口0x1f3
+    mov dx, 0x1f3
+    out dx, al
+
+    ;LBA地址15~8位写入端口0x1f4
+    push cx
+    mov cl, 8
+    shr eax, cl
+    mov dx, 0x1f4
+    out dx, al
+
+    ;LBA地址23~16位写入端口0x1f5
+    shr eax, cl
+    mov dx, 0x1f5
+    out dx, al
+
+    ;设置device
+    shr eax, cl
+    and al, 0x0f   ;设置LB地址24~27位
+    or al, 0xe0    ;0xe0 -> 11100000 ,设置7~4位为1110，表示为LBA模式
+    mov dx, 0x1f6
+    out dx, al     ;将配置信息写入端口0x1f6
+
+;第三步:向0x1f7端口写入读命令(0x20)
+    mov dx, 0x1f7
+    mov al, 0x20
+    out dx, al
+
+;第四步:检测硬盘状态
+.not_ready:
+    ;同一端口，写时表示写入命令,读时表示读入硬盘状态
+    nop
+    in al, dx
+    and al, 0x88    ;第3位为1表示硬盘控制器已经准备好数据传输
+                    ;第7位为1表示硬盘忙
+    cmp al, 0x08
+    jnz .not_ready  ;若为准备好,则跳回not_ready处继续等待
+
+;第五步:从0x1f0端口读入数据
+    pop ax        ; cx -> ax
+    mov dx, 256   ;一个扇区512字节,每次读入一字,即两字节,共要读256次
+    mul dx
+    mov cx, ax
+    mov dx, 0x1f0
+
+.go_on_read:
+    in ax, dx
+    mov [ebx], ax
+    add ebx, 2
+    loop .go_on_read
+    ret
+
+; ============================================================
+; 将kernel.bin中的segment拷贝到编译的地址
+; ============================================================
+kernel_init:
+    xor eax, eax
+    xor ebx, ebx   ;ebx记录程序头表的地址
+    xor ecx, ecx   ;ecx记录程序头表中的program header数量
+    xor edx, edx   ;edx记录program header的尺寸,即e_phentsize
+
+; ---------------------------------------------
+; 提取 ELF 文件头中的程序头信息
+; ---------------------------------------------
+    ;e_phentsize（2 字节）-> 程序头条目的大小
+    mov dx, [KERNEL_BIN_BASE_ADDR + 42]
+    ;e_phoff（4 字节）-> 程序头表的起始位置
+    mov ebx, [KERNEL_BIN_BASE_ADDR + 28]
+    add ebx,  KERNEL_BIN_BASE_ADDR
+    ;e_phnum（2 字节）-> 程序头表的条目计数
+    mov cx, [KERNEL_BIN_BASE_ADDR + 44]
+
+; ---------------------------------------------
+; 处理ELF文件中的每个段
+; ---------------------------------------------
+.each_segment:
+    ;p_type 等于 PT_NULL 说明此program header未使用
+    cmp byte [ebx+0], PT_NULL
+    je .PT_NULL
+
+;为函数mem_cpy(dst,src,size)压入参数
+    ;第三个参数,p_filesz = size
+    push dword [ebx+16]
+
+    ;第二个参数,p_offset + base_addr = src addr
+    mov eax, [ebx+4]
+    add eax, KERNEL_BIN_BASE_ADDR
+    push eax
+
+    ;第一个参数,p_vaddr = dest addr
+    push dword [ebx+8]
+    call mem_cpy
+
+    ;清理栈中压入的三个参数
+    add esp, 12
+
+.PT_NULL:
+    ;edx记录program header的尺寸,故ebx指向下一个program header
+    add ebx, edx
+    loop .each_segment
+    ret
+
+; ---------------------------------------------
+; 逐字节拷贝函数mem_cpy(dst,src,size)
+; ---------------------------------------------
+mem_cpy:
+    ; 将方向标志位设置为0,这意味着传输方向是朝高地址的方向
+    cld
+    push ebp      ;入栈备份
+    mov ebp, esp
+    push ecx      ;入栈备份
+
+    mov edi, [ebp+8]   ;第一个参数dst
+    mov esi, [ebp+12]  ;第二个参数src
+    mov ecx, [ebp+16]  ;第三个参数size
+
+    ;重复执行 movsb 指令，重复次数为 ecx 的值
+    rep movsb
+
+    ;恢复环境
+    pop ecx
+    pop ebp
     ret

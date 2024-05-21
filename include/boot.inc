@@ -104,14 +104,17 @@ PG_US_U equ 100b
 ;------------------------------------
 ; ELF 段相关值
 ;------------------------------------
-
 PT_NULL equ 0
 
 ;------------------------------------
 ; 内核属性
 ;------------------------------------
 
-KERNEL_START_SECTOR equ 0x9
+;kernel.bin 所在的扇区号
+KERNEL_START_SECTOR equ 0x9 
+
+;从磁盘读出后要写到内存中的地址
 KERNEL_BIN_BASE_ADDR equ 0x70000
+
+;解析完后要写到内存中的地址
 KERNEL_ENTRY_POINT equ 0xc0001500
-.
