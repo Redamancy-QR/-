@@ -10,11 +10,9 @@
 %define ERROR_CODE nop
 %define ZERO push 0
 
-extern put_str
+extern idt_table
 
 section .data
-    intr_str db "interript occur!", 0xa, 0
-
 ;------------------------
 ; 中断处理程序的入口地址数组
 ;------------------------
@@ -29,23 +27,42 @@ intr_%1_entry:
     ; 这里可能会使用 push 0 或 nop 指令。这条指令必须首先执行。
     %2
 
-    push intr_str
-    call put_str
-    add esp, 4
-	
-    ; 发送中断结束命令EOI
-    mov al, 0x20 
-    out 0xa0, al ; 从片
-    out 0x20, al ; 主片
+    push ds
+    push es
+    push fs
+    push gs
+    pushad
 
-    add esp, 4 ; 跨过 error_code
-    iret
+    ; 发送 EOI（End of Interrupt）信号给中断代理
+    mov al,0x20   ;中断结束命令EOI
+    out 0xa0,al   ;向从片发送
+    out 0x20,al   ;向主片发送
+
+    ; 用于调试的时候，%1 代表中断向量号
+    push %1
+
+    ; 调用真正的中断处理程序
+    call [idt_table + %1*4]
+    jmp intr_exit
 
 ; 存储中断处理程序的入口地址
 section .data
     dd intr_%1_entry
 
 %endmacro
+
+section .text
+global intr_exit
+intr_exit:
+    add esp,4 ; 跳过中断向量号。
+    popad
+    pop gs
+    pop fs
+    pop es
+    pop ds
+
+    add esp,4  ;跳过ERROR_CODE
+    iretd
 
 ;-------------------------------------------------------------------------
 ; 调用宏函数,传递两个参数
@@ -84,4 +101,4 @@ VECTOR 0X1c, ZERO
 VECTOR 0X1d, ZERO
 VECTOR 0X1e, ERROR_CODE
 VECTOR 0X1f, ZERO
-VECTOR 0X20, ZERO ; IR0 --- clock interrupt
+VECTOR 0X20, ZERO ; IR0 --- 时钟中断
