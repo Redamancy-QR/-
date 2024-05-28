@@ -16,6 +16,9 @@
  */
 #define IDT_DESC_COUNT 0x21
 
+/* eflags 寄存器中的 if 位为 1 */
+#define EFLAGS_IF 0x00000200
+#define GET_EFLAGS(EFLAGS_VAR) asm volatile("pushfl;popl %0" : "=g"(EFLAGS_VAR))
 
 /**
  * 结构体 gate_desc - 中断描述符表条目（即门）结构体。
@@ -170,4 +173,59 @@ void idt_init() {
     uint64_t idt_operand = ((sizeof(idt) - 1) | ((uint64_t)((uint32_t)idt << 16)));
     asm volatile("lidt %0" ::"m"(idt_operand));
     put_str("  idt_init done\n");
+}
+
+/**
+ * intr_enable - 启用中断
+ *
+ * 此函数使用 `sti` 指令将 eflag 寄存器中的 "if" 位设置为 1。
+ * 返回: 旧的中断状态。
+ */
+enum intr_status intr_enable() {
+    enum intr_status old_status;
+    if (INTR_ON == intr_get_status()) {
+        old_status = INTR_ON;
+    } else {
+        old_status = INTR_OFF;
+        asm volatile("sti");
+    }
+    return old_status;
+}
+
+/**
+ * intr_disable - 禁用中断
+ *
+ * 此函数使用 `cli` 指令将 eflag 寄存器中的 "if" 位设置为 0。
+ * 返回: 旧的中断状态。
+ */
+enum intr_status intr_disable() {
+    enum intr_status old_status;
+    if (INTR_ON == intr_get_status()) {
+        old_status = INTR_ON;
+        asm volatile("cli" : : : "memory");
+    } else {
+        old_status = INTR_OFF;
+    }
+    return old_status;
+}
+
+/**
+ * intr_set_status - 将中断状态设置为参数 status 的值
+ * @status: 要设置的中断状态。
+ *
+ * 返回: 旧的中断状态
+ */
+enum intr_status intr_set_status(enum intr_status status) {
+    return status & INTR_ON ? intr_enable() : intr_disable();
+}
+
+/**
+ * intr_get_status - 通过检查 IF 标志获取当前中断状态
+ *
+ * 返回: 中断状态。相关的枚举变量在 interrupt.h 中定义。
+ */
+enum intr_status intr_get_status() {
+    uint32_t eflags = 0;
+    GET_EFLAGS(eflags);
+    return (EFLAGS_IF & eflags) ? INTR_ON : INTR_OFF;
 }
