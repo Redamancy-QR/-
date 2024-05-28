@@ -4,7 +4,7 @@ AS = nasm
 CC = gcc
 LD = ld
 
-LIB = -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ 
+LIB = -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/
 ASFLAGS = -f elf
 CFLAGS = -m32 -Wall $(LIB) -c -fno-builtin -fno-stack-protector -g
 LDFLAGS= -m elf_i386 -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
@@ -12,7 +12,7 @@ LDFLAGS= -m elf_i386 -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
 OBJS =  $(BUILD_DIR)/main.o $(BUILD_DIR)/init.o $(BUILD_DIR)/interrupt.o              \
 		$(BUILD_DIR)/timer.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/print.o               \
 		$(BUILD_DIR)/debug.o $(BUILD_DIR)/string.o $(BUILD_DIR)/bitmap.o              \
-		$(BUILD_DIR)/memory.o #$(BUILD_DIR)/thread.o $(BUILD_DIR)/list.o              \
+		$(BUILD_DIR)/memory.o $(BUILD_DIR)/thread.o #$(BUILD_DIR)/list.o              \
 		$(BUILD_DIR)/switch.o $(BUILD_DIR)/console.o $(BUILD_DIR)/sync.o              \
 		$(BUILD_DIR)/keyboard.o $(BUILD_DIR)/io_queue.o $(BUILD_DIR)/tss.o            \
 		$(BUILD_DIR)/process.o $(BUILD_DIR)/syscall_init.o $(BUILD_DIR)/syscall.o     \
@@ -23,17 +23,15 @@ OBJS =  $(BUILD_DIR)/main.o $(BUILD_DIR)/init.o $(BUILD_DIR)/interrupt.o        
 
 ################## compile C program ##################
 $(BUILD_DIR)/main.o: kernel/main.c lib/kernel/print.h lib/stdint.h kernel/init.h  \
-	kernel/memory.h kernel/init.h kernel/debug.h kernel/interrupt.h
-#	thread/thread.h \
-	fs/fs.h fs/dir.h lib/user/syscall.h userprog/process.h userprog/syscall_init.h  \
+	kernel/memory.h kernel/init.h kernel/debug.h kernel/interrupt.h thread/thread.h
+#	fs/fs.h fs/dir.h lib/user/syscall.h userprog/process.h userprog/syscall_init.h  \
 	device/io_queue.h   device/keyboard.h lib/stdio.h  \
 	shell/shell.c lib/user/syscall.h lib/kernel/stdio_kernel.h device/console.h
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/init.o: kernel/init.c kernel/init.h kernel/interrupt.h kernel/global.h \
-	lib/kernel/io.h lib/kernel/print.h lib/stdint.h 
-#	thread/thread.h userprog/syscall_init.h \
-	device/ide.h
+	lib/kernel/io.h lib/kernel/print.h lib/stdint.h thread/thread.h 
+#	 userprog/syscall_init.h device/ide.h
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/interrupt.o: kernel/interrupt.c kernel/interrupt.h kernel/global.h \
@@ -41,8 +39,7 @@ $(BUILD_DIR)/interrupt.o: kernel/interrupt.c kernel/interrupt.h kernel/global.h 
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/timer.o: device/timer.c device/timer.h lib/stdint.h \
-	lib/kernel/io.h lib/kernel/print.h 
-#	thread/thread.h
+	lib/kernel/io.h lib/kernel/print.h thread/thread.h
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/debug.o: kernel/debug.c kernel/debug.h lib/stdint.h \
@@ -62,9 +59,10 @@ $(BUILD_DIR)/memory.o: kernel/memory.c kernel/memory.h lib/stdint.h \
 	lib/string.h
 	$(CC) $(CFLAGS) $< -o $@
 
-#$(BUILD_DIR)/thread.o: thread/thread.c thread/thread.h thread/switch.h lib/stdint.h \
-	kernel/global.h kernel/memory.h lib/string.h
-#	$(CC) $(CFLAGS) $< -o $@
+$(BUILD_DIR)/thread.o: thread/thread.c thread/thread.h  lib/stdint.h \
+	kernel/global.h kernel/memory.h lib/string.h 
+#   thread/switch.h
+	$(CC) $(CFLAGS) $< -o $@
 
 #$(BUILD_DIR)/list.o: lib/kernel/list.c lib/kernel/list.h kernel/global.h\
 kernel/interrupt.h
