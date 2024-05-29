@@ -143,6 +143,45 @@ void schedule() {
     switch_to(cur_thread, next);
 }
 
+/**
+ * thread_block - 阻塞当前正在运行的线程
+ * @stat: 要分配给线程的新状态（BLOCKED、HANGING、WAITING）
+ *
+ * 将当前线程的状态更改为给定的状态，并重新调度。
+ */
+void thread_block(enum task_status stat) {
+    enum intr_status old_status = intr_disable();
+
+    ASSERT(stat == TASK_BLOCKED || stat == TASK_HANGING || stat == TASK_WAITING);
+
+    struct task_struct *cur_thread = running_thread();
+    cur_thread->status = stat;
+    schedule();
+    intr_set_status(old_status);
+}
+
+/**
+ * thread_unblock - 解除指定线程的阻塞状态
+ * @pthread: 要解除阻塞的线程指针
+ *
+ * 将给定的线程从阻塞状态移动到就绪状态，使其重新具备调度资格。
+ */
+void thread_unblock(struct task_struct *pthread) {
+    enum intr_status old_status = intr_disable();
+
+    ASSERT(pthread->status == TASK_BLOCKED || pthread->status == TASK_HANGING ||
+            pthread->status == TASK_WAITING);
+    
+    if(pthread->status != TASK_READY){
+        ASSERT(!list_elem_find(&thread_ready_list, &pthread->general_tag));
+        if (list_elem_find(&thread_ready_list, &pthread->general_tag))
+            PANIC("blocked thread in ready_list\n");
+        list_push(&thread_ready_list, &pthread->general_tag);
+        pthread->status = TASK_READY;
+    }
+    intr_set_status(old_status);
+}
+
 void thread_init() {
     put_str("  thread_init start\n");
     list_init(&thread_ready_list);

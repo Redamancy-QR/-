@@ -6,6 +6,7 @@
 #include "print.h"
 #include "string.h"
 #include "thread.h"
+#include "console.h"
 
 void kthread_a(void *arg);
 void kthread_b(void *arg);
@@ -17,7 +18,7 @@ int main() {
     thread_start("kthread_b",8,kthread_b,"argB ");
     intr_enable();
     while (1){
-        put_str("Main ");
+        console_put_str("Main ");
     }
     return 0;
 }
@@ -25,13 +26,13 @@ int main() {
 void kthread_a(void *arg) {
     char* para =arg;
     while (1){
-        put_str(para);
+        console_put_str(para);
     }
 }
 
 void kthread_b(void *arg) {
     char* para =arg;
     while (1){
-        put_str(para);
+        console_put_str(para);
     }
 }
