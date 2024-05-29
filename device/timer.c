@@ -1,6 +1,10 @@
 #include "timer.h"
 #include "io.h"
 #include "print.h"
+#include "debug.h"
+#include "thread.h"
+#include "interrupt.h"
+#include "stdint.h"
 
 #define IRQ0_FREQUENCY    100
 #define INPUT_FREQUENCY   1193180
@@ -10,6 +14,9 @@
 #define COUNTER0_MODE     2
 #define READ_WRITE_LATCH  3
 #define PIT_CONTROL_PORT  0x43
+
+/* 内核自中断开启以内总的嘀嗒数  */
+uint32_t ticks;
 
 /**
  * frequency_set - 初始化可编程间隔定时器 Intel 8253
@@ -35,6 +42,24 @@ static void frequency_set(  uint8_t counter_port,
 }
 
 /*
+ * intr_time_handler - 时钟的中断处理函数
+ */
+static void intr_time_handler(void) {
+    struct task_struct *cur_thread = running_thread();
+    ASSERT(cur_thread->stack_magic == 0x20030807);
+
+    cur_thread->elapsed_ticks++;
+    ticks++;
+
+    if (cur_thread->ticks == 0) {
+        /* time slice of current thread is over */
+        schedule();
+    } else {
+        cur_thread->ticks--;
+    }
+}
+
+/*
  * timer_init - 初始化定时器
  *
  * 这个函数封装了 frequency_set 函数。因此，外部函数可以轻松地调用 timer_init 完成定时器的初始化。
@@ -43,5 +68,6 @@ static void frequency_set(  uint8_t counter_port,
 void timer_init() {
     put_str("  timer_init start\n");
     frequency_set(COUNTER0_PORT, COUNTER0_NO, READ_WRITE_LATCH, COUNTER0_MODE,COUNTER0_VALUE);
+    register_handler(0x20, intr_time_handler);
     put_str("  timer_init done\n");
 }

@@ -111,24 +111,49 @@ static void idt_desc_init() {
     put_str("    idt_desc_init done\n");
 }
 
-/*
+/**
  * general_intr_handler - 打印中断向量号
  * @vec_nr: 要打印的中断向量号
  *
  * 这个函数是所有中断的默认通用的中断处理程序,一般在异常出现时处理。
  */
 static void general_intr_handler(uint8_t vec_nr) {
-    /* 
-    * 忽略虚假中断 */
+    /* 忽略虚假中断 */
     if (vec_nr == 0x27 || vec_nr == 0x2f)
         return;
 
-    put_str("int vector : 0x");
-    put_int(vec_nr);
-    put_char('\n');
+    /* 设置光标位置为左上角，并清空一片区域，方便阅读打印的信息*/
+    set_cursor(0);
+    int cursor_pos = 0;
+    while (cursor_pos < 320) {
+        put_char(' ');
+        ++cursor_pos;
+    }
+
+    set_cursor(0);
+    put_str("!!!!!!      exception message begin      !!!!!!\n");
+    set_cursor(88);
+    put_str(intr_name[vec_nr]);
+    if (vec_nr == 14) {
+        uint32_t page_fault_vaddr;
+        asm volatile("movl %%cr2,%0" : "=r"(page_fault_vaddr));
+        put_str("\npage fault addr is ");
+        put_int(page_fault_vaddr);
+    }
+    put_str("\n!!!!!!      exception message end      !!!!!!\n");
+    while (1);
 }
 
-/*
+/**
+ * register_handler - 在中断处理程序数组第 vec_nr 元素中注册安装中断处理程序 function
+ * @vec_nr: 中断向量号。
+ * @function: 待安装的中断处理函数。
+ */
+void register_handler(uint8_t vec_nr, intr_handler function) {
+    idt_table[vec_nr] = function;
+}
+
+/**
  * exception_init - 初始化 idt 表,完成一般中断处理函数注册及异常名称注册
  *
  * 这个函数将所有中断的默认中断处理程序函数设置为 general_intr_handler。

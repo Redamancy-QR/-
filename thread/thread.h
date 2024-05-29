@@ -1,14 +1,13 @@
 #ifndef __THREAD_THREAD_H
 #define __THREAD_THREAD_H
-//#include "list.h"
-//#include "memory.h"
+#include "list.h"
+#include "memory.h"
 #include "stdint.h"
 
 #define MAX_FILES_OPEN_PER_PROC 8
 #define TASK_NAME_LEN 16
 
 typedef void thread_func(void *);
-//typedef int16_t pid_t;
 
 /* 线程生命周期内可能的状态 */
 enum task_status {
@@ -73,9 +72,7 @@ struct thread_stack {
     uint32_t ebx;
     uint32_t edi;
     uint32_t esi;
-
     void (*eip)(thread_func *func, void *func_arg);
-
     /* 以下仅供第一次被调度上cpu使用 */
     void(*unused_retaddr);
     thread_func *function;
@@ -86,21 +83,32 @@ struct thread_stack {
  * struct task_struct - 进程或线程的PCB，即程序控制块
  * @self_kstack: 各线程的内核栈顶指针。
  * @status: 线程状态。
- * @priority: 线程的优先级。
  * @name: 任务（线程或进程）的名字。
+ * @priority: 线程的优先级。
+ * @ticks: 每次在处理器是执行的时间嘀嗒数。
+ * @elapsed_ticks: 此任务自上CPU后一共执行了多少嘀嗒数。
+ * @general_tag: 线程在一般的队列中的节点
+ * @all_list_tag: 线程在线程队列 thread_all_list 中的节点
+ * @pg_dir: 描述自己页表的虚拟地址，如果是TCB，则为NULL
  * @stack_magic: 魔数，用与栈的边界标记。
  */
 struct task_struct {
     uint32_t *self_kstack;
     enum task_status status;
-    uint8_t priority;
     char name[TASK_NAME_LEN];
-
+    uint8_t priority;
+    uint8_t ticks;
+    uint32_t elapsed_ticks;
+    struct list_elem general_tag;
+    struct list_elem all_list_tag;
+    uint32_t *pg_dir;
     uint32_t stack_magic;
 };
 
 void thread_init();
+struct task_struct *running_thread();
 void init_thread(struct task_struct *thread, char *name, int _priority);
 void thread_create(struct task_struct *thread, thread_func function,void *func_arg);
 struct task_struct *thread_start(char *name, int _priority,thread_func function, void *func_arg);
+void schedule();
 #endif
