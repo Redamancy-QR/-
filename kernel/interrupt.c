@@ -201,6 +201,17 @@ void idt_init() {
 }
 
 /**
+ * intr_get_status - 通过检查 IF 标志获取当前中断状态
+ *
+ * 返回: 中断状态。相关的枚举变量在 interrupt.h 中定义。
+ */
+enum intr_status intr_get_status() {
+    uint32_t eflags = 0;
+    GET_EFLAGS(eflags);
+    return (EFLAGS_IF & eflags) ? INTR_ON : INTR_OFF;
+}
+
+/**
  * intr_enable - 启用中断
  *
  * 此函数使用 `sti` 指令将 eflag 寄存器中的 "if" 位设置为 1。
@@ -244,13 +255,3 @@ enum intr_status intr_set_status(enum intr_status status) {
     return status & INTR_ON ? intr_enable() : intr_disable();
 }
 
-/**
- * intr_get_status - 通过检查 IF 标志获取当前中断状态
- *
- * 返回: 中断状态。相关的枚举变量在 interrupt.h 中定义。
- */
-enum intr_status intr_get_status() {
-    uint32_t eflags = 0;
-    GET_EFLAGS(eflags);
-    return (EFLAGS_IF & eflags) ? INTR_ON : INTR_OFF;
-}

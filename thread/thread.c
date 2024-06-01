@@ -13,7 +13,7 @@
 struct task_struct *main_thread;       //主线程PCB
 struct list thread_ready_list;         //就绪队列
 struct list thread_all_list;           //所有任务队列
-static struct list_elem* thread_tag;   //保存队列中的线程节点
+//static struct list_elem* thread_tag;   //保存队列中的线程节点
 
 //extern void switch_to(struct task_struct* cur,struct task_struct* next);
 
@@ -135,7 +135,8 @@ void schedule() {
 
     ASSERT(!list_empty(&thread_ready_list));
 
-    thread_tag = NULL;
+    static struct list_elem* thread_tag;
+    //thread_tag = NULL;
     thread_tag = list_pop(&thread_ready_list);
     /* 根据 general_tag 获取 PCB 的起始地址 */
     struct task_struct *next = elem2entry(struct task_struct, general_tag, thread_tag);
@@ -172,13 +173,13 @@ void thread_unblock(struct task_struct *pthread) {
     ASSERT(pthread->status == TASK_BLOCKED || pthread->status == TASK_HANGING ||
             pthread->status == TASK_WAITING);
     
-    if(pthread->status != TASK_READY){
-        ASSERT(!list_elem_find(&thread_ready_list, &pthread->general_tag));
+    //if(pthread->status != TASK_READY){
+        //ASSERT(!list_elem_find(&thread_ready_list, &pthread->general_tag));
         if (list_elem_find(&thread_ready_list, &pthread->general_tag))
             PANIC("blocked thread in ready_list\n");
         list_push(&thread_ready_list, &pthread->general_tag);
         pthread->status = TASK_READY;
-    }
+    //}
     intr_set_status(old_status);
 }
 
