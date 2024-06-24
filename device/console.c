@@ -14,8 +14,6 @@ void console_release() { lock_release(&console_lock); }
 void console_put_str(char *str) {
     console_acquire();
     put_str(str);
-    put_int(console_lock.sema.value);
-    put_str("\n");
     console_release();
 }
 

@@ -5,6 +5,8 @@
 #include "interrupt.h"
 #include "thread.h"
 #include "console.h"
+#include "keyboard.h"
+
 void init_all() {
     put_str("init_all_start\n");
     idt_init();
@@ -12,6 +14,6 @@ void init_all() {
     thread_init();
     timer_init();
     console_init();
-    
+    keyboard_init();
     //put_str("init_all_end\n");
 }

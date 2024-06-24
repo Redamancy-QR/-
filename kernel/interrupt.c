@@ -14,7 +14,7 @@
 /* 
  * 中断描述符的总数
  */
-#define IDT_DESC_COUNT 0x21
+#define IDT_DESC_COUNT 0x30
 
 /* eflags 寄存器中的 if 位为 1 */
 #define EFLAGS_IF 0x00000200
@@ -74,8 +74,8 @@ static void pic_init() {
     /* 从芯片的 ICW4：设置无 AEOI，手动发送 EOI*/
     outb(PIC_S_DATA, 0x01);
 
-    /* 打开主片上的IR0，也就是目前只接受时钟产生的中断 */
-    outb(PIC_M_DATA, 0xfe);
+    /* 打开主片上的IR0、IR1，也就是目前只接受时钟、键盘产生的中断 */
+    outb(PIC_M_DATA, 0xfc);
     outb(PIC_S_DATA, 0xff);
 
     put_str("    pic_init done\n");
