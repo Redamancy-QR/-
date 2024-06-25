@@ -4,8 +4,7 @@ AS = nasm
 CC = gcc
 LD = ld
 
-LIB = -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ 
-#-I userprog/ -I fs/ -I shell/
+LIB = -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/ -I userprog/ #-I fs/ -I shell/
 ASFLAGS = -f elf
 CFLAGS = -m32 -Wall $(LIB) -c -fno-builtin -fno-stack-protector -g
 LDFLAGS= -m elf_i386 -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
@@ -15,8 +14,8 @@ OBJS=	$(BUILD_DIR)/main.o $(BUILD_DIR)/init.o $(BUILD_DIR)/interrupt.o  \
 		$(BUILD_DIR)/debug.o $(BUILD_DIR)/string.o $(BUILD_DIR)/bitmap.o  \
 		$(BUILD_DIR)/memory.o $(BUILD_DIR)/thread.o $(BUILD_DIR)/list.o   \
 		$(BUILD_DIR)/switch.o $(BUILD_DIR)/console.o $(BUILD_DIR)/sync.o \
-		$(BUILD_DIR)/keyboard.o $(BUILD_DIR)/ioqueue.o #$(BUILD_DIR)/tss.o \
-		$(BUILD_DIR)/process.o $(BUILD_DIR)/syscall_init.o $(BUILD_DIR)/syscall.o \
+		$(BUILD_DIR)/keyboard.o $(BUILD_DIR)/ioqueue.o $(BUILD_DIR)/tss.o \
+		#$(BUILD_DIR)/process.o $(BUILD_DIR)/syscall_init.o $(BUILD_DIR)/syscall.o \
 		$(BUILD_DIR)/stdio.o $(BUILD_DIR)/stdio_kernel.o $(BUILD_DIR)/ide.o \
 		$(BUILD_DIR)/fs.o $(BUILD_DIR)/inode.o $(BUILD_DIR)/dir.o $(BUILD_DIR)/file.o \
 		$(BUILD_DIR)/fork.o $(BUILD_DIR)/shell.o $(BUILD_DIR)/buildin_cmd.o \
@@ -87,9 +86,9 @@ $(BUILD_DIR)/ioqueue.o: device/ioqueue.c device/ioqueue.h kernel/debug.h \
 	kernel/global.h  kernel/interrupt.h thread/sync.h thread/thread.h
 	$(CC) $(CFLAGS) $< -o $@
 
-#$(BUILD_DIR)/tss.o: userprog/tss.c userprog/tss.h kernel/global.h thread/thread.h lib/string.h lib/stdint.h \
+$(BUILD_DIR)/tss.o: userprog/tss.c userprog/tss.h kernel/global.h thread/thread.h lib/string.h lib/stdint.h \
 	lib/kernel/print.h
-#	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $< -o $@
 
 #$(BUILD_DIR)/process.o: userprog/process.c userprog/process.h lib/stdint.h thread/thread.h \
 	lib/string.h kernel/memory.h kernel/global.h kernel/debug.h userprog/tss.h lib/kernel/list.h device/console.h \
