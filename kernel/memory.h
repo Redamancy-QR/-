@@ -1,6 +1,7 @@
 #ifndef __KERNEL_MEMORY_H
 #define __KERNEL_MEMORY_H
 #include "bitmap.h"
+#include "list.h"
 #include "stdint.h"
 
 #define PG_P_1  1 //页表项或页目录项存在属性位
@@ -33,4 +34,7 @@ struct virtual_addr {
 extern struct pool kernel_pool, user_pool;
 void mem_init();
 void *get_kernel_pages(uint32_t pg_cnt);
+void *get_a_page(enum pool_flags pf, uint32_t vaddr);
+uint32_t addr_v2p(uint32_t vaddr);
+
 #endif

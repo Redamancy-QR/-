@@ -8,6 +8,8 @@
 #include "print.h"
 #include "debug.h"
 #include "list.h"
+#include "process.h"
+
 #define PAGE_SIZE 4096
 
 struct task_struct *main_thread;       //主线程PCB
@@ -135,12 +137,14 @@ void schedule() {
 
     ASSERT(!list_empty(&thread_ready_list));
 
-    static struct list_elem* thread_tag;
+    struct list_elem* thread_tag;
     //thread_tag = NULL;
     thread_tag = list_pop(&thread_ready_list);
     /* 根据 general_tag 获取 PCB 的起始地址 */
     struct task_struct *next = elem2entry(struct task_struct, general_tag, thread_tag);
     next->status = TASK_RUNNING;
+    /* 更新 tss  */
+    process_activate(next);
     switch_to(cur_thread, next);
 }
 

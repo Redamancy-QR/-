@@ -5,11 +5,11 @@
 #include "debug.h"
 #include "global.h"
 #include "string.h"
-
+#include "list.h"
 #include "interrupt.h"
-
-
-
+#include "string.h"
+#include "thread.h"
+#include "sync.h"
 #define PAGE_SIZE 4096
 
 /* 内核位图的虚拟地址 */
@@ -26,7 +26,7 @@
  * @pool_bitmap: 用于跟踪内存池中页面分配状态的位图。
  * @phy_addr_start: 内存池的起始物理地址。
  * @pool_size: 内存池的总大小。
- *
+ * @_lock: 用于申请内存时的互斥。
  * 此结构用于管理物理内存池，无论是用于内核还是用户空间。
  * 它包括一个位图，用于高效地跟踪哪些页面是空闲的或已分配的，以及内存池的起始地址和总大小。
  */
@@ -34,6 +34,7 @@ struct pool {
     struct bitmap pool_bitmap;
     uint32_t phy_addr_start;
     uint32_t pool_size;
+    struct lock _lock;
 };
 /* 内核、用户的物理内存池 */
 struct pool kernel_pool, user_pool;
@@ -57,6 +58,9 @@ struct virtual_addr kernel_vaddr;
 static void mem_pool_init(uint32_t all_mem) {
     put_str("     mem_pool_init start\n");
 
+    lock_init(&kernel_pool._lock);
+    lock_init(&user_pool._lock);
+    
     /* 1 页目录表（PDT）+ 255 页表（PT）= 4KB * 256 = 1024KB = 1MB（0x100000B） */
     uint32_t page_table_size = PAGE_SIZE * 256;
 
@@ -153,20 +157,18 @@ static void *vaddr_get(enum pool_flags pf, uint32_t pg_cnt) {
         }
         vaddr_start = kernel_vaddr.vaddr_start + free_bit_idx_start * PAGE_SIZE;
     } else {
-        /* for user process*/
-        /*
+        /* 用户进程 */
         struct task_struct *cur = running_thread();
         free_bit_idx_start = bitmap_scan(&cur->userprog_vaddr.vaddr_bitmap, pg_cnt);
-        if (free_bit_idx_start == -1)
-        return NULL;
-        while (cnt < pg_cnt) {
-        bitmap_set(&cur->userprog_vaddr.vaddr_bitmap, free_bit_idx_start + cnt++,
-                    1);
+        if (free_bit_idx_start == -1){
+            return NULL;
         }
-        vaddr_start =
-            cur->userprog_vaddr.vaddr_start + free_bit_idx_start * PAGE_SIZE;
+            
+        while (cnt < pg_cnt) {
+            bitmap_set(&cur->userprog_vaddr.vaddr_bitmap, free_bit_idx_start + cnt++,1);
+        }
+        vaddr_start = cur->userprog_vaddr.vaddr_start + free_bit_idx_start * PAGE_SIZE;
         ASSERT((uint32_t)vaddr_start < (0xc0000000 - PAGE_SIZE));
-        */
     }
     return (void *)vaddr_start;
 }
@@ -324,4 +326,75 @@ void *get_kernel_pages(uint32_t pg_cnt) {
     if (vaddr != NULL)
         memset(vaddr, 0, pg_cnt * PAGE_SIZE);
     return vaddr;
+}
+
+/**
+ * get_user_page - 分配用户空间页面
+ * @pg_cnt: 要分配的4K页面数量
+ * 返回：分配的用户空间内存的虚拟地址
+ *
+ * 在用户空间分配'pg_cnt'数量的4K页面，初始化分配的空间为零，并返回分配空间的虚拟地址。
+ * 通过在用户内存池上获取锁来确保分配期间的互斥。
+ */
+
+void *get_user_page(uint32_t pg_cnt) {
+    lock_acquire(&user_pool._lock);
+    void *vaddr = malloc_page(PF_USER, pg_cnt);
+    if (vaddr != NULL){
+        memset(vaddr, 0, pg_cnt * PAGE_SIZE);
+    }
+    lock_release(&user_pool._lock);
+    return vaddr;
+}
+
+/**
+ * get_a_page - 将虚拟地址映射到物理页面
+ * @pf: 池标志，指示页面是为用户还是内核
+ * @vaddr: 要映射的虚拟地址
+ * 返回：成功时返回虚拟地址‘vaddr’，失败时返回NULL
+ *
+ * 将给定的虚拟地址‘vaddr’映射到指定池‘pf’（用户或内核）的物理页面。
+ * 该函数首先在内存池上获取锁，计算来自虚拟地址的位图索引，设置位图中相应的位以指示页面被使用，
+ * 分配一个物理页面，并添加虚拟地址与物理页面之间的映射。返回前释放锁。如果物理页面分配失败，则返回NULL。
+ */
+
+void *get_a_page(enum pool_flags pf, uint32_t vaddr) {
+    struct pool *mem_pool = pf & PF_KERNEL ? &kernel_pool : &user_pool;
+    lock_acquire(&mem_pool->_lock);
+    struct task_struct *cur_thread = running_thread();
+    int32_t bit_idx = -1;
+
+    if (cur_thread->pg_dir != NULL && pf == PF_USER) {
+        bit_idx = (vaddr - cur_thread->userprog_vaddr.vaddr_start) / PAGE_SIZE;
+        ASSERT(bit_idx > 0);
+        bitmap_set(&cur_thread->userprog_vaddr.vaddr_bitmap, bit_idx, 1);
+    } else if (cur_thread->pg_dir == NULL && pf == PF_KERNEL) {
+        bit_idx = (vaddr - kernel_vaddr.vaddr_start) / PAGE_SIZE;
+        ASSERT(bit_idx > 0);
+        bitmap_set(&kernel_vaddr.vaddr_bitmap, bit_idx, 1);
+    } else {
+        PANIC("Unable to establish mapping between pf and vaddr");
+    }
+    void *page_phy_addr = palloc(mem_pool);
+    if (page_phy_addr == NULL) {
+        //lock_release(&mem_pool->_lock);
+        return NULL;
+    }
+    page_table_add((void *)vaddr, page_phy_addr);
+    lock_release(&mem_pool->_lock);
+    return (void *)vaddr;
+}
+
+/**
+ * addr_v2p - 将虚拟地址转换为物理地址
+ * @vaddr: 要转换的虚拟地址
+ * 返回：相应的物理地址
+ *
+ * 该函数使用页表条目将给定的虚拟地址转换为其对应的物理地址。
+ * 它首先定位给定虚拟地址的页表条目，然后从中提取物理地址。
+ * 函数结合页表条目中提取的物理页面帧地址的高20位与原始虚拟地址的低12位，形成完整的物理地址。
+ */
+uint32_t addr_v2p(uint32_t vaddr) {
+    uint32_t *pte_phy_addr = pte_ptr(vaddr);
+    return ((*pte_phy_addr & 0xfffff000) + (vaddr & 0x00000fff));
 }

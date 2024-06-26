@@ -90,6 +90,7 @@ struct thread_stack {
  * @general_tag: 线程在一般的队列中的节点
  * @all_list_tag: 线程在线程队列 thread_all_list 中的节点
  * @pg_dir: 描述自己页表的虚拟地址，如果是TCB，则为NULL
+ * @userprog_vaddr: 用户进程的虚拟内存池
  * @stack_magic: 魔数，用与栈的边界标记。
  */
 struct task_struct {
@@ -101,7 +102,8 @@ struct task_struct {
     uint32_t elapsed_ticks;
     struct list_elem general_tag;
     struct list_elem all_list_tag;
-    uint32_t *pg_dir;
+    uint32_t *pg_dir; 
+    struct virtual_addr userprog_vaddr; //
     uint32_t stack_magic;
 };
 
