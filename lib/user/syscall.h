@@ -4,9 +4,9 @@
 
 enum SYSCALL_NR {
     SYS_GETPID,
-    
+    SYS_WRITE
 };
 
 uint32_t getpid();
-
+uint32_t write(char* str);
 #endif

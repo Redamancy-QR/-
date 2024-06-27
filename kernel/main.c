@@ -8,6 +8,7 @@
 #include "thread.h"
 #include "console.h"
 #include "process.h"
+#include "stdio.h"
 
 #include "syscall_init.h"
 #include "syscall.h"
@@ -25,7 +26,7 @@ int main() {
     process_execute(u_prog_a,"user_prog_a");
     process_execute(u_prog_b,"user_prog_b");
     intr_enable();
-    console_put_str("Main_pid:0x ");
+    console_put_str("I am Main_pid:0x ");
     console_put_int(sys_getpid());
     console_put_char('\n');
     thread_start("kthread_a",31,kthread_a," A_");
@@ -39,32 +40,28 @@ int main() {
 
 void kthread_a(void *arg) {
     char* para = arg;
-    console_put_str("thread_a_pid:0x ");
+    console_put_str("I am thread_a_pid:0x ");
     console_put_int(sys_getpid());
-    console_put_char('\n');
-    console_put_str("prog_a_pid:0x ");
-    console_put_int(prog_a_pid);
     console_put_char('\n');
     while (1);
 }
 
 void kthread_b(void *arg) {
     char* para = arg;
-    console_put_str("thread_b_pid:0x ");
+    console_put_str("I am thread_b_pid:0x ");
     console_put_int(sys_getpid());
-    console_put_char('\n');
-    console_put_str("prog_b_pid:0x ");
-    console_put_int(prog_b_pid);
     console_put_char('\n');
     while (1);
 }
 
 void u_prog_a(void){
-    prog_a_pid = getpid();
+    char* name = "prog_a";
+    printf("I am %s, my pid:%d%c",name,getpid(),'\n');
     while(1);
 }
 
 void u_prog_b(void){
-    prog_b_pid = getpid();
+    char* name = "prog_b";
+    printf("I am %s, my pid:%d%c",name,getpid(),'\n');
     while(1);
 }

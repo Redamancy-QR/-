@@ -39,3 +39,8 @@
 
 /* 获取当前运行任务的 PID */
 uint32_t getpid() { return _syscall0(SYS_GETPID); }
+
+/* 从缓冲区将数据写入文件或标准输出 */
+uint32_t write(char* str) {
+    return _syscall1(SYS_WRITE, str);
+}
