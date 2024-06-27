@@ -15,8 +15,8 @@ OBJS=	$(BUILD_DIR)/main.o $(BUILD_DIR)/init.o $(BUILD_DIR)/interrupt.o  \
 		$(BUILD_DIR)/memory.o $(BUILD_DIR)/thread.o $(BUILD_DIR)/list.o   \
 		$(BUILD_DIR)/switch.o $(BUILD_DIR)/console.o $(BUILD_DIR)/sync.o \
 		$(BUILD_DIR)/keyboard.o $(BUILD_DIR)/io_queue.o $(BUILD_DIR)/tss.o \
-		$(BUILD_DIR)/process.o #$(BUILD_DIR)/syscall_init.o $(BUILD_DIR)/syscall.o \
-		$(BUILD_DIR)/stdio.o $(BUILD_DIR)/stdio_kernel.o $(BUILD_DIR)/ide.o \
+		$(BUILD_DIR)/process.o $(BUILD_DIR)/syscall_init.o $(BUILD_DIR)/syscall.o \
+		#$(BUILD_DIR)/stdio.o $(BUILD_DIR)/stdio_kernel.o $(BUILD_DIR)/ide.o \
 		$(BUILD_DIR)/fs.o $(BUILD_DIR)/inode.o $(BUILD_DIR)/dir.o $(BUILD_DIR)/file.o \
 		$(BUILD_DIR)/fork.o $(BUILD_DIR)/shell.o $(BUILD_DIR)/buildin_cmd.o \
 		$(BUILD_DIR)/exec.o $(BUILD_DIR)/assert.o
@@ -24,15 +24,17 @@ OBJS=	$(BUILD_DIR)/main.o $(BUILD_DIR)/init.o $(BUILD_DIR)/interrupt.o  \
 ################## compile C program ##################
 $(BUILD_DIR)/main.o: kernel/main.c lib/kernel/print.h lib/stdint.h kernel/init.h \
 	thread/thread.h kernel/memory.h kernel/init.h kernel/debug.h kernel/interrupt.h \
-	device/console.h device/keyboard.h device/io_queue.h userprog/process.h
-#	fs/fs.h fs/dir.h lib/user/syscall.h  userprog/syscall_init.h  \
+	device/console.h device/keyboard.h device/io_queue.h userprog/process.h \
+	lib/user/syscall.h userprog/syscall_init.h
+#	fs/fs.h fs/dir.h     \
 	lib/stdio.h  \
-	shell/shell.c lib/user/syscall.h lib/kernel/stdio_kernel.h 
+	shell/shell.c  lib/kernel/stdio_kernel.h 
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/init.o: kernel/init.c kernel/init.h kernel/interrupt.h kernel/global.h \
-	lib/kernel/print.h lib/stdint.h thread/thread.h lib/kernel/io.h
-#	userprog/syscall_init.h device/ide.h 
+	lib/kernel/print.h lib/stdint.h thread/thread.h lib/kernel/io.h \
+	userprog/syscall_init.h
+# device/ide.h 
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/interrupt.o: kernel/interrupt.c kernel/interrupt.h kernel/global.h \
@@ -95,12 +97,13 @@ $(BUILD_DIR)/process.o: userprog/process.c userprog/process.h lib/stdint.h threa
 	kernel/interrupt.h device/console.h userprog/userprog.h
 	$(CC) $(CFLAGS) $< -o $@
 
-#$(BUILD_DIR)/syscall.o: lib/user/syscall.c lib/user/syscall.h
-#	$(CC) $(CFLAGS) $< -o $@
+$(BUILD_DIR)/syscall.o: lib/user/syscall.c lib/user/syscall.h
+	$(CC) $(CFLAGS) $< -o $@
 
-#$(BUILD_DIR)/syscall_init.o: userprog/syscall_init.c userprog/syscall_init.h lib/stdint.h \
-	lib/kernel/print.h lib/user/syscall.h thread/thread.h fs/fs.h
-#	$(CC) $(CFLAGS) $< -o $@
+$(BUILD_DIR)/syscall_init.o: userprog/syscall_init.c userprog/syscall_init.h lib/stdint.h \
+	lib/kernel/print.h lib/user/syscall.h thread/thread.h 
+#fs/fs.h
+	$(CC) $(CFLAGS) $< -o $@
 
 #$(BUILD_DIR)/stdio.o: lib/stdio.c lib/stdio.h lib/stdint.h lib/string.h
 #	$(CC) $(CFLAGS) $< -o $@

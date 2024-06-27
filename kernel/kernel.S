@@ -117,3 +117,31 @@ VECTOR 0X2c, ZERO
 VECTOR 0X2d, ZERO
 VECTOR 0X2e, ZERO
 VECTOR 0X2f, ZERO
+
+;------------------------ 0x80 中断------------------------
+[bits 32]
+extern syscall_table
+section .text
+global syscall_handler
+syscall_handler:
+    push 0
+    push ds
+    push es
+    push fs
+    push gs
+    pushad
+
+    push 0x80
+
+    push edx
+    push ecx
+    push ebx
+
+    call [syscall_table+4*eax]
+    ; 跳过堆栈中的 3 个参数
+    add esp,12
+
+    ; esp+(8)*4 是 eax 恢复的地方
+    ; 8 是 `push 0x80` 的一个字节加上 `pushad` 的七个字节
+    mov [esp+8*4], eax
+    jmp intr_exit

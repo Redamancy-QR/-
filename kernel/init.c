@@ -7,6 +7,7 @@
 #include "console.h"
 #include "keyboard.h"
 #include "tss.h"
+#include "syscall_init.h"
 
 void init_all() {
     put_str("init_all_start\n");
@@ -17,5 +18,6 @@ void init_all() {
     console_init();
     keyboard_init();
     tss_init();
+    syscall_init();
     //put_str("init_all_end\n");
 }

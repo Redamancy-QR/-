@@ -8,6 +8,7 @@
 #define TASK_NAME_LEN 16
 
 typedef void thread_func(void *);
+typedef int16_t pid_t;
 
 /* 线程生命周期内可能的状态 */
 enum task_status {
@@ -95,6 +96,7 @@ struct thread_stack {
  */
 struct task_struct {
     uint32_t *self_kstack;
+    pid_t pid;
     enum task_status status;
     char name[TASK_NAME_LEN];
     uint8_t priority;

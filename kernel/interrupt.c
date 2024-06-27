@@ -14,7 +14,7 @@
 /* 
  * 中断描述符的总数
  */
-#define IDT_DESC_COUNT 0x30
+#define IDT_DESC_COUNT 0x81
 
 /* eflags 寄存器中的 if 位为 1 */
 #define EFLAGS_IF 0x00000200
@@ -50,6 +50,8 @@ intr_handler idt_table[IDT_DESC_COUNT];
 
 /* 中断处理函数入口地址数组 */
 extern intr_handler intr_entry_table[IDT_DESC_COUNT];
+/* 'int 0x80' 的中断处理程序，在 kernel.S 中定义 */
+extern uint32_t syscall_handler(void);
 
 /**
  * pic_init - 设置主/从 8259A 芯片。
@@ -107,7 +109,9 @@ static void idt_desc_init() {
     {
         make_idt_desc(&idt[i], IDT_DESC_ATTR_DPL0, intr_entry_table[i]);
     }
-
+    /* 为中断 'int 0x80' 创建描述符 */
+    int lastindex = IDT_DESC_COUNT - 1;
+    make_idt_desc(&idt[lastindex], IDT_DESC_ATTR_DPL3, syscall_handler);
     put_str("    idt_desc_init done\n");
 }
 
